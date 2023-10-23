@@ -47,22 +47,20 @@ const updateRoleGameWithPlayer = (
           action: true,
         };
       }
-      if (
-        user.name === player1Role.name &&
-        currentUser.name !== player1Role.name
-      ) {
+
+      if (user.name !== player1Role.name && currentUser.name === user.name) {
+        return {
+          ...user,
+          action: true,
+        };
+      }
+
+      if (user.name === player1Role.name) {
         return player1Role;
       }
 
       if (user.name === player2Role.name) {
         return player2Role;
-      }
-
-      if (currentUser.name === user.name) {
-        return {
-          ...user,
-          action: true,
-        };
       }
 
       return user;
@@ -82,24 +80,27 @@ const updateRoleGameWithCard = (
 ): Game | undefined => {
   const game = getGame(code);
   if (game) {
+    const threeRemainCard = game.threeRemainCard;
     const updatePlayerAction = {
       ...player,
       action: true,
     };
     const playerRole = updateUserRole(
       updatePlayerAction,
-      game.threeRemainCard[index]
+      threeRemainCard[index]
     );
-    game.threeRemainCard[index] = player.role as Role;
+    threeRemainCard[index] = player.role as Role;
     const rolesPlayer = game.rolesPlayer.map((user) => {
       if (user.name === playerRole.name) {
         return playerRole;
       }
       return user;
     });
+
     return {
       ...game,
       rolesPlayer,
+      threeRemainCard,
     };
   }
 };
