@@ -11,4 +11,14 @@ type User = {
   action?: boolean;
 };
 
+export type ConnectionDetailsBody = {
+  code: string;
+  name: string;
+};
+
+export type ConnectionDetails = {
+  token: string;
+  ws_url: string;
+};
+
 export { User };

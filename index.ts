@@ -19,13 +19,16 @@ import {
   updateRoleGameWithPlayer,
   updateStatusAction,
 } from "./controllers/gameController";
+import router from "./routers/audio";
 
 const PORT = process.env.PORT || 5000;
 const REACT_ENDPOINT = process.env.REACT_ENDPOINT || "http://localhost:3000";
 
 const app = express();
 const server = http.createServer(app);
-app.use(cors);
+app.use(express.json());
+app.use(cors());
+app.use(router);
 
 const io = new SocketIO(server, {
   path: "/api/socket/io",
@@ -127,10 +130,7 @@ io.on("connection", (socket) => {
   });
 
   socket.on("update-status-action", (payload) => {
-    const game = updateStatusAction(
-      payload.code,
-      payload.user,
-    );
+    const game = updateStatusAction(payload.code, payload.user);
     if (game) {
       const user = getUser(socket.id);
       if (user) {
