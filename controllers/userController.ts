@@ -14,8 +14,8 @@ const addUser = ({
   code: string;
   master: boolean;
 }): User => {
-  name = name.trim().toLowerCase();
-  code = code.trim().toLowerCase();
+  name = name.trim();
+  code = code.trim();
 
   const existingUser = users.find(
     (user) => user.code === code && user.name === name

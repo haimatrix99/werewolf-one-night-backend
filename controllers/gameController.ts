@@ -15,7 +15,7 @@ const addGame = (
   rolesPlayer: User[],
   threeRemainCard: Role[]
 ) => {
-  code = code.trim().toLowerCase();
+  code = code.trim();
 
   const game = { code, rolesPlayer, threeRemainCard };
   games.push(game);
