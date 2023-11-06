@@ -29,6 +29,11 @@ const addUser = ({
   return user;
 };
 
+const removeAllUsersInRoom = (code: string) => {
+  const users = getUsersInRoom(code);
+  users.map((user) => removeUser(user.id));
+};
+
 const removeUser = (id: string): User | undefined => {
   const index = users.findIndex((user) => user.id === id);
   if (index !== -1) return users.splice(index, 1)[0];
@@ -74,4 +79,5 @@ export {
   updateUserRole,
   updateUserAction,
   updateUserVoted,
+  removeAllUsersInRoom,
 };

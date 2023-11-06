@@ -9,6 +9,7 @@ import {
   addUser,
   getUser,
   getUsersInRoom,
+  removeAllUsersInRoom,
   removeUser,
 } from "./controllers/userController";
 
@@ -173,6 +174,7 @@ io.on("connection", (socket) => {
 
   socket.on("restart-game", (payload) => {
     removeGame(payload.code);
+    removeAllUsersInRoom(payload.code);
   });
 
   socket.on("disconnect", () => {
