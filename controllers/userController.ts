@@ -21,7 +21,8 @@ const addUser = ({
     (user) => user.code === code && user.name === name
   );
 
-  if (existingUser) return { id, name, code, master, error: "Username is taken." };
+  if (existingUser)
+    return { id, name, code, master, error: "Username is taken." };
 
   const user = { id, name, code, master };
   users.push(user);
@@ -33,8 +34,8 @@ const removeUser = (id: string): User | undefined => {
   if (index !== -1) return users.splice(index, 1)[0];
 };
 
-const getUser = (id: string): User | undefined => {
-  return users.find((user) => user.id === id);
+const getUser = (id: string, code: string): User | undefined => {
+  return users.find((user) => user.id === id && user.code === code);
 };
 
 const getUsersInRoom = (code: string): User[] => {
@@ -45,16 +46,32 @@ const updateUserRole = (user: User, role: Role | undefined): User => {
   const updateUser = {
     ...user,
     role,
-  }
-  return updateUser
+  };
+  return updateUser;
 };
 
 const updateUserAction = (user: User) => {
   const updateUser = {
     ...user,
-    action: true
-  }
-  return updateUser
-}
+    action: true,
+  };
+  return updateUser;
+};
 
-export { addUser, removeUser, getUser, getUsersInRoom, updateUserRole, updateUserAction };
+const updateUserVoted = (currentUser: User, name: string) => {
+  const updateUser = {
+    ...currentUser,
+    voted: name,
+  };
+  return updateUser;
+};
+
+export {
+  addUser,
+  removeUser,
+  getUser,
+  getUsersInRoom,
+  updateUserRole,
+  updateUserAction,
+  updateUserVoted,
+};

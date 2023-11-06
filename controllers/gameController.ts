@@ -1,25 +1,35 @@
 import { Role } from "../lib/enums";
-import { User } from "../lib/types";
-import { updateUserAction, updateUserRole } from "./userController";
-
-type Game = {
-  code: string;
-  rolesPlayer: User[];
-  threeRemainCard: Role[];
-};
+import { User, Game } from "../lib/types";
+import {
+  updateUserAction,
+  updateUserRole,
+  updateUserVoted,
+} from "./userController";
 
 const games: Game[] = [];
 
 const addGame = (
   code: string,
-  rolesPlayer: User[],
-  threeRemainCard: Role[]
+  players: User[],
+  threeRemainCard: Role[],
+  discussTime: number
 ) => {
   code = code.trim();
 
-  const game = { code, rolesPlayer, threeRemainCard };
+  const game = {
+    code,
+    players,
+    threeRemainCard,
+    discussTime,
+    isEnded: false,
+  };
   games.push(game);
   return game;
+};
+
+const removeGame = (code: string): Game | undefined => {
+  const index = games.findIndex((game) => game.code === code);
+  if (index !== -1) return games.splice(index, 1)[0];
 };
 
 const getGame = (code: string): Game | undefined => {
@@ -33,13 +43,14 @@ const updateRoleGameWithPlayer = (
   currentUser: User
 ): Game | undefined => {
   const game = getGame(code);
+  removeGame(code);
   if (game) {
     const player1Role = updateUserRole(player1, player2.role);
     const player2Role = updateUserRole(player2, player1.role);
 
-    const rolesPlayer = game.rolesPlayer.map((user) => {
+    const players = game.players.map((player) => {
       if (
-        user.name === player1Role.name &&
+        player.name === player1Role.name &&
         currentUser.name === player1Role.name
       ) {
         return {
@@ -48,27 +59,34 @@ const updateRoleGameWithPlayer = (
         };
       }
 
-      if (user.name !== player1Role.name && currentUser.name === user.name) {
+      if (
+        player.name !== player1Role.name &&
+        currentUser.name === player.name
+      ) {
         return {
-          ...user,
+          ...player,
           action: true,
         };
       }
 
-      if (user.name === player1Role.name) {
+      if (player.name === player1Role.name) {
         return player1Role;
       }
 
-      if (user.name === player2Role.name) {
+      if (player.name === player2Role.name) {
         return player2Role;
       }
 
-      return user;
+      return player;
     });
 
+    games.push({
+      ...game,
+      players,
+    });
     return {
       ...game,
-      rolesPlayer,
+      players,
     };
   }
 };
@@ -79,6 +97,7 @@ const updateRoleGameWithCard = (
   index: number
 ): Game | undefined => {
   const game = getGame(code);
+  removeGame(code);
   if (game) {
     const threeRemainCard = game.threeRemainCard;
     const updatePlayerAction = {
@@ -90,16 +109,20 @@ const updateRoleGameWithCard = (
       threeRemainCard[index]
     );
     threeRemainCard[index] = player.role as Role;
-    const rolesPlayer = game.rolesPlayer.map((user) => {
-      if (user.name === playerRole.name) {
+    const players = game.players.map((player) => {
+      if (player.name === playerRole.name) {
         return playerRole;
       }
-      return user;
+      return player;
     });
-
+    games.push({
+      ...game,
+      players,
+      threeRemainCard,
+    });
     return {
       ...game,
-      rolesPlayer,
+      players,
       threeRemainCard,
     };
   }
@@ -107,17 +130,45 @@ const updateRoleGameWithCard = (
 
 const updateStatusAction = (code: string, player: User): Game | undefined => {
   const game = getGame(code);
+  removeGame(code);
   if (game) {
     const userUpdate = updateUserAction(player);
-    const rolesPlayer = game.rolesPlayer.map((user) => {
-      if (user.name === userUpdate.name) {
+    const players = game.players.map((player) => {
+      if (player.name === userUpdate.name) {
         return userUpdate;
       }
-      return user;
+      return player;
     });
+    games.push({ ...game, players });
     return {
       ...game,
-      rolesPlayer,
+      players,
+    };
+  }
+};
+
+const updateStatusVoted = (
+  code: string,
+  currentUser: User,
+  name: string
+): Game | undefined => {
+  const game = getGame(code);
+  removeGame(code);
+  if (game) {
+    const currentUserUpdate = updateUserVoted(currentUser, name);
+    const players = game.players.map((player) => {
+      if (player.name === currentUserUpdate.name) {
+        return currentUserUpdate;
+      }
+      return player;
+    });
+    const playersVoted = players.filter((player) => player.voted !== undefined);
+    const isEnded = playersVoted.length === players.length;
+    games.push({ ...game, players, isEnded });
+    return {
+      ...game,
+      players,
+      isEnded,
     };
   }
 };
@@ -125,7 +176,9 @@ const updateStatusAction = (code: string, player: User): Game | undefined => {
 export {
   addGame,
   getGame,
+  removeGame,
   updateRoleGameWithPlayer,
   updateRoleGameWithCard,
   updateStatusAction,
+  updateStatusVoted,
 };

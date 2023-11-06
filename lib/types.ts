@@ -1,10 +1,19 @@
 import { Role } from "./enums";
 
+type Game = {
+  code: string;
+  players: User[];
+  threeRemainCard: Role[];
+  discussTime: number;
+  isEnded: boolean;
+};
+
 type User = {
   id: string;
   name: string;
   code: string;
   master: boolean;
+  voted?: string;
   role?: Role;
   firstRole?: Role;
   error?: string;
@@ -21,4 +30,4 @@ export type ConnectionDetails = {
   ws_url: string;
 };
 
-export { User };
+export { User, Game };

@@ -15,9 +15,11 @@ import {
 import {
   addGame,
   getGame,
+  removeGame,
   updateRoleGameWithCard,
   updateRoleGameWithPlayer,
   updateStatusAction,
+  updateStatusVoted,
 } from "./controllers/gameController";
 import router from "./routers/audio";
 
@@ -31,6 +33,10 @@ app.use(cors());
 app.use(router);
 
 const io = new SocketIO(server, {
+  connectionStateRecovery: {
+    maxDisconnectionDuration: 2 * 60 * 1000,
+    skipMiddlewares: true,
+  },
   path: "/api/socket/io",
   addTrailingSlash: false,
   cors: {
@@ -67,27 +73,35 @@ io.on("connection", (socket) => {
       users: getUsersInRoom(user.code),
     });
   });
-  socket.on("user-message", (message, callBack) => {
-    const user = getUser(socket.id);
+  socket.on("user-message", (payload, callBack) => {
+    const user = getUser(socket.id, payload.code);
     if (user) {
-      io.to(user.code).emit("message", { user: user.name, text: message }); // send this message to the room
+      io.to(user.code).emit("message", {
+        user: user.name,
+        text: payload.message,
+      }); // send this message to the room
       callBack();
     }
   });
   socket.on("game", (payload) => {
-    const user = getUser(socket.id);
+    const user = getUser(socket.id, payload.code);
     if (user) {
       io.to(user.code).emit("start-game", {
         startGame: true,
       });
-      addGame(user.code, payload.rolesPlayer, payload.threeRemainCard);
+      addGame(
+        user.code,
+        payload.players,
+        payload.threeRemainCard,
+        payload.discussTime
+      );
     }
   });
 
   socket.on("get-game-info", (payload) => {
     const game = getGame(payload.code);
     if (game) {
-      const user = getUser(socket.id);
+      const user = getUser(socket.id, payload.code);
       if (user) {
         io.to(user.code).emit("game-info", {
           game,
@@ -104,7 +118,7 @@ io.on("connection", (socket) => {
       payload.currentUser
     );
     if (game) {
-      const user = getUser(socket.id);
+      const user = getUser(socket.id, payload.code);
       if (user) {
         io.to(user.code).emit("game-info", {
           game,
@@ -120,7 +134,7 @@ io.on("connection", (socket) => {
       payload.index
     );
     if (game) {
-      const user = getUser(socket.id);
+      const user = getUser(socket.id, payload.code);
       if (user) {
         io.to(user.code).emit("game-info", {
           game,
@@ -132,13 +146,33 @@ io.on("connection", (socket) => {
   socket.on("update-status-action", (payload) => {
     const game = updateStatusAction(payload.code, payload.user);
     if (game) {
-      const user = getUser(socket.id);
+      const user = getUser(socket.id, payload.code);
       if (user) {
         io.to(user.code).emit("game-info", {
           game,
         });
       }
     }
+  });
+
+  socket.on("update-status-voted", (payload) => {
+    const game = updateStatusVoted(
+      payload.code,
+      payload.currentUser,
+      payload.name
+    );
+    if (game) {
+      const user = getUser(socket.id, payload.code);
+      if (user) {
+        io.to(user.code).emit("game-info", {
+          game,
+        });
+      }
+    }
+  });
+
+  socket.on("restart-game", (payload) => {
+    removeGame(payload.code);
   });
 
   socket.on("disconnect", () => {
