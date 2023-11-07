@@ -51,10 +51,6 @@ io.on("connection", (socket) => {
   socket.on("create-room", ({ name, code }) => {
     const user = addUser({ id: socket.id, name, code, master: true });
     socket.join(user.code);
-    socket.emit("message", {
-      user: "",
-      text: `Welcome ${user.name} in room ${user.code}.`,
-    });
     io.to(user.code).emit("users-online", {
       users: getUsersInRoom(user.code),
     });
@@ -63,10 +59,6 @@ io.on("connection", (socket) => {
     const user = addUser({ id: socket.id, name, code, master: false });
     if (user.error) return callback(user.error);
     socket.join(user.code);
-    socket.emit("message", {
-      user: "",
-      text: `Welcome ${user.name} in room ${user.code}.`,
-    });
     socket.broadcast
       .to(user.code)
       .emit("message", { user: "", text: `${user.name} has joined the room` });
@@ -80,7 +72,7 @@ io.on("connection", (socket) => {
       io.to(user.code).emit("message", {
         user: user.name,
         text: payload.message,
-      }); // send this message to the room
+      });
       callBack();
     }
   });
@@ -169,6 +161,13 @@ io.on("connection", (socket) => {
           game,
         });
       }
+    }
+  });
+
+  socket.on("get-game-setup", (payload) => {
+    const user = getUser(socket.id, payload.code);
+    if (user) {
+      io.to(user.code).emit("game-setup", payload);
     }
   });
 
