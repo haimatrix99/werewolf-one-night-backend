@@ -1,5 +1,11 @@
 import { Role } from "./enums";
 
+type GameSetup = {
+  code: string;
+  numbers: number[];
+  discussTime: string;
+};
+
 type Game = {
   code: string;
   players: User[];
@@ -30,4 +36,4 @@ export type ConnectionDetails = {
   ws_url: string;
 };
 
-export { User, Game };
+export { User, Game, GameSetup };

@@ -16,7 +16,9 @@ import {
 import {
   addGame,
   getGame,
+  getGameSetup,
   removeGame,
+  updateGameSetup,
   updateRoleGameWithCard,
   updateRoleGameWithPlayer,
   updateStatusAction,
@@ -64,6 +66,12 @@ io.on("connection", (socket) => {
       .emit("message", { user: "", text: `${user.name} has joined the room` });
     io.to(user.code).emit("users-online", {
       users: getUsersInRoom(user.code),
+    });
+    const { numbers, discussTime } = getGameSetup(user.code);
+    io.to(user.code).emit("game-setup", {
+      code: user.code,
+      numbers,
+      discussTime,
     });
   });
   socket.on("user-message", (payload, callBack) => {
@@ -165,6 +173,7 @@ io.on("connection", (socket) => {
   });
 
   socket.on("get-game-setup", (payload) => {
+    updateGameSetup(payload.code, payload.numbers, payload.discussTime);
     const user = getUser(socket.id, payload.code);
     if (user) {
       io.to(user.code).emit("game-setup", payload);

@@ -1,5 +1,5 @@
 import { Role } from "../lib/enums";
-import { User, Game } from "../lib/types";
+import { User, Game, GameSetup } from "../lib/types";
 import {
   updateUserAction,
   updateUserRole,
@@ -7,6 +7,26 @@ import {
 } from "./userController";
 
 const games: Game[] = [];
+
+const gameSetup: any = {};
+
+const updateGameSetup = (
+  code: string,
+  numbers: number[],
+  discussTime: string
+) => {
+  code = code.trim();
+  gameSetup[code] = {
+    numbers,
+    discussTime,
+  };
+};
+
+const getGameSetup = (
+  code: string
+): { numbers: number[]; discussTime: string } => {
+  return gameSetup[code];
+};
 
 const addGame = (
   code: string,
@@ -174,6 +194,8 @@ const updateStatusVoted = (
 };
 
 export {
+  updateGameSetup,
+  getGameSetup,
   addGame,
   getGame,
   removeGame,
