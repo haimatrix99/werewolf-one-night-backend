@@ -1,17 +1,19 @@
 import { Role } from "./enums";
 
 type GameSetup = {
-  code: string;
-  numbers: number[];
-  discussTime: string;
+  [key: string]: {
+    numbers: number[];
+    discussTime: string;
+  };
 };
 
 type Game = {
-  code: string;
-  players: User[];
-  threeRemainCard: Role[];
-  discussTime: number;
-  isEnded: boolean;
+  [key: string]: {
+    players: User[];
+    threeRemainCard: Role[];
+    discussTime: number;
+    isEnded: boolean;
+  };
 };
 
 type User = {

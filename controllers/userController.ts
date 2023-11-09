@@ -1,5 +1,6 @@
 import { Role } from "../lib/enums";
 import { User } from "../lib/types";
+import { isGameExist } from "./gameController";
 
 const users: User[] = [];
 
@@ -21,6 +22,11 @@ const addUser = ({
     (user) => user.code === code && user.name === name
   );
 
+  const gameExist = isGameExist(code);
+
+  if (!gameExist)
+    return { id, name, code, master, error: "Code is not be exist." };
+
   if (existingUser)
     return { id, name, code, master, error: "Username is taken." };
 
@@ -39,8 +45,8 @@ const removeUser = (id: string): User | undefined => {
   if (index !== -1) return users.splice(index, 1)[0];
 };
 
-const getUser = (id: string, code: string): User | undefined => {
-  return users.find((user) => user.id === id && user.code === code);
+const getUser = (code: string, name: string): User | undefined => {
+  return users.find((user) => user.code === code && user.name === name);
 };
 
 const getUsersInRoom = (code: string): User[] => {

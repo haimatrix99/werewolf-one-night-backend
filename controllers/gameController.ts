@@ -6,16 +6,23 @@ import {
   updateUserVoted,
 } from "./userController";
 
-const games: Game[] = [];
+const games: Game = {};
 
-const gameSetup: any = {};
+const gameSetup: GameSetup = {};
+
+const addGameSetup = (code: string) => {
+  code = code.trim();
+  gameSetup[code] = {
+    numbers: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+    discussTime: "10",
+  };
+};
 
 const updateGameSetup = (
   code: string,
   numbers: number[],
   discussTime: string
 ) => {
-  code = code.trim();
   gameSetup[code] = {
     numbers,
     discussTime,
@@ -28,6 +35,10 @@ const getGameSetup = (
   return gameSetup[code];
 };
 
+const isGameExist = (code: string) => {
+  return gameSetup[code] ? true : false;
+};
+
 const addGame = (
   code: string,
   players: User[],
@@ -37,23 +48,21 @@ const addGame = (
   code = code.trim();
 
   const game = {
-    code,
     players,
     threeRemainCard,
     discussTime,
     isEnded: false,
   };
-  games.push(game);
+  games[code] = game;
   return game;
 };
 
-const removeGame = (code: string): Game | undefined => {
-  const index = games.findIndex((game) => game.code === code);
-  if (index !== -1) return games.splice(index, 1)[0];
+const removeGame = (code: string) => {
+  delete games[code];
 };
 
-const getGame = (code: string): Game | undefined => {
-  return games.find((game) => game.code === code);
+const getGame = (code: string) => {
+  return games[code];
 };
 
 const updateRoleGameWithPlayer = (
@@ -61,9 +70,8 @@ const updateRoleGameWithPlayer = (
   player1: User,
   player2: User,
   currentUser: User
-): Game | undefined => {
+) => {
   const game = getGame(code);
-  removeGame(code);
   if (game) {
     const player1Role = updateUserRole(player1, player2.role);
     const player2Role = updateUserRole(player2, player1.role);
@@ -100,10 +108,11 @@ const updateRoleGameWithPlayer = (
       return player;
     });
 
-    games.push({
+    games[code] = {
       ...game,
       players,
-    });
+    };
+
     return {
       ...game,
       players,
@@ -111,13 +120,8 @@ const updateRoleGameWithPlayer = (
   }
 };
 
-const updateRoleGameWithCard = (
-  code: string,
-  player: User,
-  index: number
-): Game | undefined => {
+const updateRoleGameWithCard = (code: string, player: User, index: number) => {
   const game = getGame(code);
-  removeGame(code);
   if (game) {
     const threeRemainCard = game.threeRemainCard;
     const updatePlayerAction = {
@@ -135,11 +139,11 @@ const updateRoleGameWithCard = (
       }
       return player;
     });
-    games.push({
+    games[code] = {
       ...game,
       players,
       threeRemainCard,
-    });
+    };
     return {
       ...game,
       players,
@@ -148,9 +152,8 @@ const updateRoleGameWithCard = (
   }
 };
 
-const updateStatusAction = (code: string, player: User): Game | undefined => {
+const updateStatusAction = (code: string, player: User) => {
   const game = getGame(code);
-  removeGame(code);
   if (game) {
     const userUpdate = updateUserAction(player);
     const players = game.players.map((player) => {
@@ -159,7 +162,7 @@ const updateStatusAction = (code: string, player: User): Game | undefined => {
       }
       return player;
     });
-    games.push({ ...game, players });
+    games[code] = { ...game, players };
     return {
       ...game,
       players,
@@ -167,13 +170,8 @@ const updateStatusAction = (code: string, player: User): Game | undefined => {
   }
 };
 
-const updateStatusVoted = (
-  code: string,
-  currentUser: User,
-  name: string
-): Game | undefined => {
+const updateStatusVoted = (code: string, currentUser: User, name: string) => {
   const game = getGame(code);
-  removeGame(code);
   if (game) {
     const currentUserUpdate = updateUserVoted(currentUser, name);
     const players = game.players.map((player) => {
@@ -184,7 +182,7 @@ const updateStatusVoted = (
     });
     const playersVoted = players.filter((player) => player.voted !== undefined);
     const isEnded = playersVoted.length === players.length;
-    games.push({ ...game, players, isEnded });
+    games[code] = { ...game, players, isEnded };
     return {
       ...game,
       players,
@@ -194,6 +192,8 @@ const updateStatusVoted = (
 };
 
 export {
+  addGameSetup,
+  isGameExist,
   updateGameSetup,
   getGameSetup,
   addGame,
