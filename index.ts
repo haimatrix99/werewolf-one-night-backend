@@ -37,6 +37,8 @@ app.use(cors());
 app.use(router);
 
 const io = new SocketIO(server, {
+  pingInterval: 24 * 60 * 60 * 1000,
+  pingTimeout: 3 * 24 * 60 * 60 * 1000,
   connectionStateRecovery: {
     maxDisconnectionDuration: 2 * 60 * 1000,
     skipMiddlewares: true,
@@ -63,9 +65,10 @@ io.on("connection", (socket) => {
     const user = addUser({ id: socket.id, name, code, master: false });
     if (user.error) return callback(user.error);
     socket.join(user.code);
-    socket.broadcast
-      .to(user.code)
-      .emit("room:message", { user: "", text: `${user.name} has joined the room` });
+    socket.broadcast.to(user.code).emit("room:message", {
+      user: "",
+      text: `${user.name} has joined the room`,
+    });
     io.to(user.code).emit("room:users", {
       users: getUsersInRoom(user.code),
     });
@@ -187,9 +190,24 @@ io.on("connection", (socket) => {
     removeAllUsersInRoom(payload.code);
   });
 
-  socket.on("disconnect", () => {
+  socket.on("room:leave", () => {
     const user = removeUser(socket.id);
     if (user) {
+      socket.leave(user.code);
+      io.to(user.code).emit("room:message", {
+        user: "",
+        text: `${user.name} left the chat`,
+      });
+      io.to(user.code).emit("room:users", {
+        users: getUsersInRoom(user.code),
+      });
+    }
+  });
+
+  socket.on("disconnect", (reason) => {
+    const user = removeUser(socket.id);
+    if (user) {
+      socket.leave(user.code);
       io.to(user.code).emit("room:message", {
         user: "",
         text: `${user.name} left the chat`,
