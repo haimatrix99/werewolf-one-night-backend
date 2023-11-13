@@ -1,11 +1,11 @@
 import express, {Request, Response} from "express";
-const router = express.Router();
+const audio = express.Router();
 import { AccessToken, RoomServiceClient } from "livekit-server-sdk";
 import { ConnectionDetailsBody } from "../lib/types";
 import * as dotenv from "dotenv";
 dotenv.config();
 
-router.post("/api/voice/connection", async (req: Request , res: Response) => {
+audio.post("/api/voice/connection", async (req: Request , res: Response) => {
   const { code, name } = req.body as ConnectionDetailsBody;
   const apiKey = process.env.LIVEKIT_API_KEY;
   const apiSecret = process.env.LIVEKIT_API_SECRET;
@@ -14,8 +14,8 @@ router.post("/api/voice/connection", async (req: Request , res: Response) => {
   if (!apiKey || !apiSecret || !wsUrl) {
     return res.status(500).json({ error: "Server misconfigured" });
   }
-  if (!name) return res.status(400).json({ error: "Missing username" });
-  if (!code) return res.status(400).json({ error: "Missing room_name" });
+  if (!name) return res.status(400).json({ error: "Missing name" });
+  if (!code) return res.status(400).json({ error: "Missing code" });
   const livekitHost = wsUrl?.replace("wss://", "https://");
 
   const at = new AccessToken(apiKey, apiSecret, { identity: name });
@@ -39,4 +39,4 @@ router.post("/api/voice/connection", async (req: Request , res: Response) => {
   
 });
 
-export default router;
+export default audio;

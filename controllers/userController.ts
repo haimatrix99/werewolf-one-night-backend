@@ -1,10 +1,20 @@
 import { Role } from "../lib/enums";
 import { User } from "../lib/types";
 import { isGameExist } from "./gameController";
+import { fs } from "../db";
+import {
+  addDoc,
+  collection,
+  deleteDoc,
+  getDocs,
+  query,
+  updateDoc,
+  where,
+} from "firebase/firestore";
 
-const users: User[] = [];
+const usersRef = collection(fs, "users");
 
-const addUser = ({
+const addUser = async ({
   id,
   name,
   code,
@@ -14,43 +24,89 @@ const addUser = ({
   name: string;
   code: string;
   master: boolean;
-}): User => {
+}) => {
   name = name.trim();
   code = code.trim();
 
-  const existingUser = users.find(
-    (user) => user.code === code && user.name === name
-  );
-
+  const user = await getUser(code, name);
+  if (user) {
+    return "Username is taken.";
+  }
   const gameExist = isGameExist(code);
+  if (!gameExist) return "Code is not be exist.";
 
-  if (!gameExist)
-    return { id, name, code, master, error: "Code is not be exist." };
-
-  if (existingUser)
-    return { id, name, code, master, error: "Username is taken." };
-
-  const user = { id, name, code, master };
-  users.push(user);
-  return user;
+  try {
+    await addDoc(usersRef, {
+      id: id,
+      code: code,
+      name: name,
+      master: master,
+    });
+  } catch (e) {
+    console.error("Error adding document: ", e);
+  }
 };
 
-const removeAllUsersInRoom = (code: string) => {
-  const users = getUsersInRoom(code);
-  users.map((user) => removeUser(user.id));
+const removeAllUsersInRoom = async (code: string) => {
+  const users = await getUsersInRoom(code);
+  users.map((user) => removeUserByName(user.code, user.name));
 };
 
-const removeUser = (id: string): User | undefined => {
-  const index = users.findIndex((user) => user.id === id);
-  if (index !== -1) return users.splice(index, 1)[0];
+const removeUserByName = async (code: string, name: string) => {
+  const userRef = await getUserRef(code, name);
+  if (userRef) {
+    await deleteDoc(userRef);
+  }
 };
 
-const getUser = (code: string, name: string): User | undefined => {
-  return users.find((user) => user.code === code && user.name === name);
+const getUserRef = async (code: string, name: string) => {
+  const q = query(
+    usersRef,
+    where("code", "==", code),
+    where("name", "==", name)
+  );
+  const querySnapshot = await getDocs(q);
+  const userRef = querySnapshot.docs.map((doc) => {
+    return doc.ref;
+  });
+  if (userRef) {
+    return userRef[0];
+  }
 };
 
-const getUsersInRoom = (code: string): User[] => {
-  return users.filter((user) => user.code === code);
+const getUser = async (code: string, name: string) => {
+  const q = query(
+    usersRef,
+    where("code", "==", code),
+    where("name", "==", name)
+  );
+  const querySnapshot = await getDocs(q);
+  const user = querySnapshot.docs.map((doc) => {
+    return doc.data() as User;
+  });
+  if (user) {
+    return user[0];
+  }
+};
+
+const getUserById = async (id: string) => {
+  const q = query(usersRef, where("id", "==", id));
+  const querySnapshot = await getDocs(q);
+  const user = querySnapshot.docs.map((doc) => {
+    return doc.data() as User;
+  });
+  if (user) {
+    return user[0];
+  }
+};
+
+const getUsersInRoom = async (code: string) => {
+  const q = query(usersRef, where("code", "==", code));
+  const querySnapshot = await getDocs(q);
+  const users = querySnapshot.docs.map((doc) => {
+    return doc.data() as User;
+  });
+  return users;
 };
 
 const updateUserRole = (user: User, role: Role | undefined): User => {
@@ -79,8 +135,10 @@ const updateUserVoted = (currentUser: User, name: string) => {
 
 export {
   addUser,
-  removeUser,
+  removeUserByName,
   getUser,
+  getUserById,
+  getUserRef,
   getUsersInRoom,
   updateUserRole,
   updateUserAction,

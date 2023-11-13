@@ -7,10 +7,10 @@ import http from "http";
 import cors from "cors";
 import {
   addUser,
-  getUser,
+  getUserById,
   getUsersInRoom,
   removeAllUsersInRoom,
-  removeUser,
+  removeUserByName,
 } from "./controllers/userController";
 
 import {
@@ -25,7 +25,9 @@ import {
   updateStatusAction,
   updateStatusVoted,
 } from "./controllers/gameController";
-import router from "./routers/audio";
+import { postMessage } from "./controllers/messageController";
+import audio from "./routers/audio";
+import users from "./routers/users";
 
 const PORT = process.env.PORT || 5000;
 const REACT_ENDPOINT = process.env.REACT_ENDPOINT || "http://localhost:3000";
@@ -34,7 +36,8 @@ const app = express();
 const server = http.createServer(app);
 app.use(express.json());
 app.use(cors());
-app.use(router);
+app.use(audio);
+app.use(users);
 
 const io = new SocketIO(server, {
   pingInterval: 24 * 60 * 60 * 1000,
@@ -53,136 +56,109 @@ const io = new SocketIO(server, {
 });
 
 io.on("connection", (socket) => {
-  socket.on("room:create", ({ name, code }) => {
-    addGameSetup(code);
-    const user = addUser({ id: socket.id, name, code, master: true });
-    socket.join(user.code);
-    io.to(user.code).emit("room:users", {
-      users: getUsersInRoom(user.code),
+  socket.on("room:create", async ({ name, code }) => {
+    await addGameSetup(code);
+    await addUser({ id: socket.id, name, code, master: true });
+    socket.join(code);
+    io.to(code).emit("room:users", {
+      users: await getUsersInRoom(code),
     });
   });
-  socket.on("room:join", ({ name, code }, callback) => {
-    const user = addUser({ id: socket.id, name, code, master: false });
-    if (user.error) return callback(user.error);
-    socket.join(user.code);
-    socket.broadcast.to(user.code).emit("room:message", {
+  socket.on("room:join", async ({ name, code }, callback) => {
+    const error = await addUser({ id: socket.id, name, code, master: false });
+    if (error) return callback(error);
+    socket.join(code);
+    socket.broadcast.to(code).emit("room:message", {
       user: "",
-      text: `${user.name} has joined the room`,
+      text: `${name} has joined the room`,
     });
-    io.to(user.code).emit("room:users", {
-      users: getUsersInRoom(user.code),
+    io.to(code).emit("room:users", {
+      users: await getUsersInRoom(code),
     });
-    const { numbers, discussTime } = getGameSetup(user.code);
-    io.to(user.code).emit("game:get:setup", {
-      code: user.code,
+    const { numbers, discussTime } = await getGameSetup(code);
+    io.to(code).emit("game:get:setup", {
+      code,
       numbers,
       discussTime,
     });
   });
-  socket.on("room:user-message", (payload, callback) => {
-    const user = getUser(payload.code, payload.name);
-    if (user) {
-      io.to(user.code).emit("room:message", {
-        user: user.name,
-        text: payload.message,
-      });
-      callback();
-    }
+  socket.on("room:user-message", async (payload, callback) => {
+    await postMessage(payload.code, payload.name, payload.message);
+    io.to(payload.code).emit("room:message", {
+      user: payload.name,
+      text: payload.message,
+    });
+    callback();
   });
-  socket.on("game:initial", (payload) => {
-    const user = getUser(payload.code, payload.name);
-    if (user) {
-      io.to(user.code).emit("game:start", {
-        startGame: true,
-      });
-      addGame(
-        user.code,
-        payload.players,
-        payload.threeRemainCard,
-        payload.discussTime
-      );
-    }
+  socket.on("game:initial", async (payload) => {
+    io.to(payload.code).emit("game:start", {
+      startGame: true,
+    });
+    addGame(
+      payload.code,
+      payload.players,
+      payload.threeRemainCard,
+      payload.discussTime
+    );
   });
 
-  socket.on("game:get:info", (payload) => {
-    const game = getGame(payload.code);
+  socket.on("game:get:info", async (payload) => {
+    const game = await getGame(payload.code);
     if (game) {
-      const user = getUser(payload.code, payload.name);
-      if (user) {
-        io.to(user.code).emit("game:info", {
-          game,
-        });
-      }
+      io.to(payload.code).emit("game:info", {
+        game,
+      });
     }
   });
 
-  socket.on("game:patch:role-player", (payload) => {
-    const game = updateRoleGameWithPlayer(
+  socket.on("game:patch:role-player", async (payload) => {
+    await updateRoleGameWithPlayer(
       payload.code,
       payload.player1,
       payload.player2,
       payload.currentUser
     );
+    const game = await getGame(payload.code);
     if (game) {
-      const user = getUser(payload.code, payload.currentUser.name);
-      if (user) {
-        io.to(user.code).emit("game:info", {
-          game,
-        });
-      }
+      io.to(payload.code).emit("game:info", {
+        game,
+      });
     }
   });
 
-  socket.on("game:patch:role-card", (payload) => {
-    const game = updateRoleGameWithCard(
-      payload.code,
-      payload.player,
-      payload.index
-    );
+  socket.on("game:patch:role-card", async (payload) => {
+    await updateRoleGameWithCard(payload.code, payload.player, payload.index);
+    const game = await getGame(payload.code);
     if (game) {
-      const user = getUser(payload.code, payload.player.name);
-      if (user) {
-        io.to(user.code).emit("game:info", {
-          game,
-        });
-      }
+      io.to(payload.code).emit("game:info", {
+        game,
+      });
     }
   });
 
-  socket.on("game:patch:status-action", (payload) => {
-    const game = updateStatusAction(payload.code, payload.user);
+  socket.on("game:patch:status-action", async (payload) => {
+    await updateStatusAction(payload.code, payload.user);
+    const game = await getGame(payload.code);
     if (game) {
-      const user = getUser(payload.code, payload.user.name);
-      if (user) {
-        io.to(user.code).emit("game:info", {
-          game,
-        });
-      }
+      io.to(payload.code).emit("game:info", {
+        game,
+      });
     }
   });
 
-  socket.on("game:patch:status-voted", (payload) => {
-    const game = updateStatusVoted(
-      payload.code,
-      payload.currentUser,
-      payload.name
-    );
+  socket.on("game:patch:status-voted", async (payload) => {
+    await updateStatusVoted(payload.code, payload.currentUser, payload.name);
+    const game = await getGame(payload.code);
     if (game) {
-      const user = getUser(payload.code, payload.currentUser.name);
-      if (user) {
-        io.to(user.code).emit("game:info", {
-          game,
-        });
-      }
+      io.to(payload.code).emit("game:info", {
+        game,
+      });
     }
   });
 
-  socket.on("game:patch:setup", (payload) => {
-    updateGameSetup(payload.code, payload.numbers, payload.discussTime);
-    const user = getUser(payload.code, payload.name);
-    if (user) {
-      io.to(user.code).emit("game:get:setup", payload);
-    }
+  socket.on("game:patch:setup", async (payload) => {
+    await updateGameSetup(payload.code, payload.numbers, payload.discussTime);
+    io.to(payload.code).emit("game:get:setup", payload);
   });
 
   socket.on("game:restart", (payload) => {
@@ -190,30 +166,29 @@ io.on("connection", (socket) => {
     removeAllUsersInRoom(payload.code);
   });
 
-  socket.on("room:leave", () => {
-    const user = removeUser(socket.id);
-    if (user) {
-      socket.leave(user.code);
-      io.to(user.code).emit("room:message", {
-        user: "",
-        text: `${user.name} left the chat`,
-      });
-      io.to(user.code).emit("room:users", {
-        users: getUsersInRoom(user.code),
-      });
-    }
+  socket.on("room:leave", async (payload) => {
+    await removeUserByName(payload.code, payload.name);
+    socket.leave(payload.code);
+    io.to(payload.code).emit("room:message", {
+      user: "",
+      text: `${payload.name} left the chat`,
+    });
+    io.to(payload.code).emit("room:users", {
+      users: await getUsersInRoom(payload.code),
+    });
   });
 
-  socket.on("disconnect", (reason) => {
-    const user = removeUser(socket.id);
+  socket.on("disconnect", async (reason) => {
+    const user = await getUserById(socket.id);
     if (user) {
       socket.leave(user.code);
+      await removeUserByName(user.code, user.name);
       io.to(user.code).emit("room:message", {
         user: "",
         text: `${user.name} left the chat`,
       });
       io.to(user.code).emit("room:users", {
-        users: getUsersInRoom(user.code),
+        users: await getUsersInRoom(user.code),
       });
     }
   });

@@ -1,3 +1,4 @@
+import { deleteDoc, doc, getDoc, setDoc, updateDoc } from "firebase/firestore";
 import { Role } from "../lib/enums";
 import { User, Game, GameSetup } from "../lib/types";
 import {
@@ -5,41 +6,45 @@ import {
   updateUserRole,
   updateUserVoted,
 } from "./userController";
+import { fs } from "../db";
 
-const games: Game = {};
-
-const gameSetup: GameSetup = {};
-
-const addGameSetup = (code: string) => {
+const addGameSetup = async (code: string) => {
   code = code.trim();
-  gameSetup[code] = {
-    numbers: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-    discussTime: "10",
-  };
+  try {
+    await setDoc(doc(fs, "game-setup", code), {
+      numbers: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+      discussTime: "10",
+    });
+  } catch (e) {
+    console.error("Error adding document: ", e);
+  }
 };
 
-const updateGameSetup = (
+const updateGameSetup = async (
   code: string,
   numbers: number[],
   discussTime: string
 ) => {
-  gameSetup[code] = {
-    numbers,
-    discussTime,
-  };
+  const gameSetupRef = doc(fs, "game-setup", code);
+  await updateDoc(gameSetupRef, {
+    numbers: numbers,
+    discussTime: discussTime,
+  });
 };
 
-const getGameSetup = (
-  code: string
-): { numbers: number[]; discussTime: string } => {
-  return gameSetup[code];
+const getGameSetup = async (code: string) => {
+  const gameSetupRef = doc(fs, "game-setup", code);
+  const gameSetup = await getDoc(gameSetupRef);
+  return gameSetup.data() as GameSetup;
 };
 
-const isGameExist = (code: string) => {
-  return gameSetup[code] ? true : false;
+const isGameExist = async (code: string) => {
+  const gameSetupRef = doc(fs, "game-setup", code);
+  const gameSetup = await getDoc(gameSetupRef);
+  return gameSetup.exists();
 };
 
-const addGame = (
+const addGame = async (
   code: string,
   players: User[],
   threeRemainCard: Role[],
@@ -47,31 +52,36 @@ const addGame = (
 ) => {
   code = code.trim();
 
-  const game = {
-    players,
-    threeRemainCard,
-    discussTime,
-    isEnded: false,
-  };
-  games[code] = game;
-  return game;
+  try {
+    await setDoc(doc(fs, "games", code), {
+      players: players,
+      threeRemainCard: threeRemainCard,
+      discussTime: discussTime,
+      isEnded: false,
+    });
+  } catch (e) {
+    console.error("Error adding document: ", e);
+  }
 };
 
-const removeGame = (code: string) => {
-  delete games[code];
+const getGame = async (code: string) => {
+  const gameRef = doc(fs, "games", code);
+  const game = await getDoc(gameRef);
+  return game.data() as Game;
 };
 
-const getGame = (code: string) => {
-  return games[code];
+const removeGame = async (code: string) => {
+  const gameRef = doc(fs, "games", code);
+  await deleteDoc(gameRef);
 };
 
-const updateRoleGameWithPlayer = (
+const updateRoleGameWithPlayer = async (
   code: string,
   player1: User,
   player2: User,
   currentUser: User
 ) => {
-  const game = getGame(code);
+  const game = await getGame(code);
   if (game) {
     const player1Role = updateUserRole(player1, player2.role);
     const player2Role = updateUserRole(player2, player1.role);
@@ -107,21 +117,19 @@ const updateRoleGameWithPlayer = (
 
       return player;
     });
-
-    games[code] = {
-      ...game,
-      players,
-    };
-
-    return {
-      ...game,
-      players,
-    };
+    const gameRef = doc(fs, "games", code);
+    await updateDoc(gameRef, {
+      players: players,
+    });
   }
 };
 
-const updateRoleGameWithCard = (code: string, player: User, index: number) => {
-  const game = getGame(code);
+const updateRoleGameWithCard = async (
+  code: string,
+  player: User,
+  index: number
+) => {
+  const game = await getGame(code);
   if (game) {
     const threeRemainCard = game.threeRemainCard;
     const updatePlayerAction = {
@@ -139,21 +147,16 @@ const updateRoleGameWithCard = (code: string, player: User, index: number) => {
       }
       return player;
     });
-    games[code] = {
-      ...game,
-      players,
-      threeRemainCard,
-    };
-    return {
-      ...game,
-      players,
-      threeRemainCard,
-    };
+    const gameRef = doc(fs, "games", code);
+    await updateDoc(gameRef, {
+      players: players,
+      threeRemainCard: threeRemainCard,
+    });
   }
 };
 
-const updateStatusAction = (code: string, player: User) => {
-  const game = getGame(code);
+const updateStatusAction = async (code: string, player: User) => {
+  const game = await getGame(code);
   if (game) {
     const userUpdate = updateUserAction(player);
     const players = game.players.map((player) => {
@@ -162,16 +165,19 @@ const updateStatusAction = (code: string, player: User) => {
       }
       return player;
     });
-    games[code] = { ...game, players };
-    return {
-      ...game,
-      players,
-    };
+    const gameRef = doc(fs, "games", code);
+    await updateDoc(gameRef, {
+      players: players,
+    });
   }
 };
 
-const updateStatusVoted = (code: string, currentUser: User, name: string) => {
-  const game = getGame(code);
+const updateStatusVoted = async (
+  code: string,
+  currentUser: User,
+  name: string
+) => {
+  const game = await getGame(code);
   if (game) {
     const currentUserUpdate = updateUserVoted(currentUser, name);
     const players = game.players.map((player) => {
@@ -182,12 +188,11 @@ const updateStatusVoted = (code: string, currentUser: User, name: string) => {
     });
     const playersVoted = players.filter((player) => player.voted !== undefined);
     const isEnded = playersVoted.length === players.length;
-    games[code] = { ...game, players, isEnded };
-    return {
-      ...game,
-      players,
-      isEnded,
-    };
+    const gameRef = doc(fs, "games", code);
+    await updateDoc(gameRef, {
+      players: players,
+      isEnded: isEnded,
+    });
   }
 };
 
