@@ -9,7 +9,6 @@ import {
   addUser,
   getUserById,
   getUsersInRoom,
-  removeAllUsersInRoom,
   removeUserByName,
 } from "./controllers/userController";
 
@@ -71,6 +70,23 @@ io.on("connection", (socket) => {
     socket.broadcast.to(code).emit("room:message", {
       user: "",
       text: `${name} has joined the room`,
+    });
+    io.to(code).emit("room:users", {
+      users: await getUsersInRoom(code),
+    });
+    const { numbers, discussTime } = await getGameSetup(code);
+    io.to(code).emit("game:get:setup", {
+      code,
+      numbers,
+      discussTime,
+    });
+  });
+  socket.on("room:rejoin", async ({ name, code }) => {
+    await addUser({ id: socket.id, name, code, master: false });
+    socket.join(code);
+    socket.broadcast.to(code).emit("room:message", {
+      user: "",
+      text: `${name} has rejoined the room`,
     });
     io.to(code).emit("room:users", {
       users: await getUsersInRoom(code),
@@ -161,9 +177,8 @@ io.on("connection", (socket) => {
     io.to(payload.code).emit("game:get:setup", payload);
   });
 
-  socket.on("game:restart", (payload) => {
-    removeGame(payload.code);
-    removeAllUsersInRoom(payload.code);
+  socket.on("game:restart", async (payload) => {
+    await removeGame(payload.code);
   });
 
   socket.on("room:leave", async (payload) => {

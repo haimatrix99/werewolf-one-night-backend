@@ -8,7 +8,6 @@ import {
   deleteDoc,
   getDocs,
   query,
-  updateDoc,
   where,
 } from "firebase/firestore";
 
@@ -28,8 +27,9 @@ const addUser = async ({
   name = name.trim();
   code = code.trim();
 
+  const userId = await getUserById(id);
   const user = await getUser(code, name);
-  if (user) {
+  if (user && userId) {
     return "Username is taken.";
   }
   const gameExist = isGameExist(code);
@@ -45,11 +45,6 @@ const addUser = async ({
   } catch (e) {
     console.error("Error adding document: ", e);
   }
-};
-
-const removeAllUsersInRoom = async (code: string) => {
-  const users = await getUsersInRoom(code);
-  users.map((user) => removeUserByName(user.code, user.name));
 };
 
 const removeUserByName = async (code: string, name: string) => {
@@ -143,5 +138,4 @@ export {
   updateUserRole,
   updateUserAction,
   updateUserVoted,
-  removeAllUsersInRoom,
 };
