@@ -26,7 +26,6 @@ import {
 } from "./controllers/gameController";
 import { postMessage } from "./controllers/messageController";
 import audio from "./routers/audio";
-import users from "./routers/users";
 
 const PORT = process.env.PORT || 5000;
 const REACT_ENDPOINT = process.env.REACT_ENDPOINT || "http://localhost:3000";
@@ -36,11 +35,8 @@ const server = http.createServer(app);
 app.use(express.json());
 app.use(cors());
 app.use(audio);
-app.use(users);
 
 const io = new SocketIO(server, {
-  pingInterval: 24 * 60 * 60 * 1000,
-  pingTimeout: 3 * 24 * 60 * 60 * 1000,
   connectionStateRecovery: {
     maxDisconnectionDuration: 2 * 60 * 1000,
     skipMiddlewares: true,
@@ -127,14 +123,15 @@ io.on("connection", (socket) => {
     }
   });
 
-  socket.on("game:patch:role-player", async (payload) => {
+  socket.on("game:patch:role-player", async (payload, callback) => {
     await updateRoleGameWithPlayer(
       payload.code,
       payload.player1,
       payload.player2,
       payload.currentUser
-    );
+    ).then();
     const game = await getGame(payload.code);
+    callback();
     if (game) {
       io.to(payload.code).emit("game:info", {
         game,

@@ -48,7 +48,7 @@ const addGame = async (
   code: string,
   players: User[],
   threeRemainCard: Role[],
-  discussTime: number
+  discussTime: string
 ) => {
   code = code.trim();
 

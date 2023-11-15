@@ -8,7 +8,7 @@ type GameSetup = {
 type Game = {
   players: User[];
   threeRemainCard: Role[];
-  discussTime: number;
+  discussTime: string;
   isEnded: boolean;
 };
 
