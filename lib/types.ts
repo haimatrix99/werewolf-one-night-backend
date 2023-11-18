@@ -20,6 +20,7 @@ type User = {
   voted?: string;
   role?: Role;
   firstRole?: Role;
+  doppelgangerRole?: Role;
   action?: boolean;
 };
 

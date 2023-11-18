@@ -27,12 +27,11 @@ const addUser = async ({
   name = name.trim();
   code = code.trim();
 
-  const userId = await getUserById(id);
   const user = await getUser(code, name);
-  if (user && userId) {
+  if (user) {
     return "Username is taken.";
   }
-  const gameExist = isGameExist(code);
+  const gameExist = await isGameExist(code);
   if (!gameExist) return "Code is not be exist.";
 
   try {
@@ -101,7 +100,9 @@ const getUsersInRoom = async (code: string) => {
   const users = querySnapshot.docs.map((doc) => {
     return doc.data() as User;
   });
-  return users;
+  if (users) {
+    return users;
+  }
 };
 
 const updateUserRole = (user: User, role: Role | undefined): User => {
@@ -116,6 +117,14 @@ const updateUserAction = (user: User) => {
   const updateUser = {
     ...user,
     action: true,
+  };
+  return updateUser;
+};
+
+const updateUserActionDoppelganger = (user: User, role: Role) => {
+  const updateUser = {
+    ...user,
+    doppelgangerRole: role,
   };
   return updateUser;
 };
@@ -138,4 +147,5 @@ export {
   updateUserRole,
   updateUserAction,
   updateUserVoted,
+  updateUserActionDoppelganger,
 };

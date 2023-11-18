@@ -22,6 +22,7 @@ import {
   updateRoleGameWithCard,
   updateRoleGameWithPlayer,
   updateStatusAction,
+  updateStatusActionDoppelganger,
   updateStatusVoted,
 } from "./controllers/gameController";
 import { postMessage } from "./controllers/messageController";
@@ -117,9 +118,7 @@ io.on("connection", (socket) => {
   socket.on("game:get:info", async (payload) => {
     const game = await getGame(payload.code);
     if (game) {
-      io.to(payload.code).emit("game:info", {
-        game,
-      });
+      io.to(payload.code).emit("game:info", game);
     }
   });
 
@@ -131,11 +130,9 @@ io.on("connection", (socket) => {
       payload.currentUser
     ).then();
     const game = await getGame(payload.code);
-    callback();
     if (game) {
-      io.to(payload.code).emit("game:info", {
-        game,
-      });
+      io.to(payload.code).emit("game:info", game);
+      callback();
     }
   });
 
@@ -143,9 +140,7 @@ io.on("connection", (socket) => {
     await updateRoleGameWithCard(payload.code, payload.player, payload.index);
     const game = await getGame(payload.code);
     if (game) {
-      io.to(payload.code).emit("game:info", {
-        game,
-      });
+      io.to(payload.code).emit("game:info", game);
     }
   });
 
@@ -153,9 +148,15 @@ io.on("connection", (socket) => {
     await updateStatusAction(payload.code, payload.user);
     const game = await getGame(payload.code);
     if (game) {
-      io.to(payload.code).emit("game:info", {
-        game,
-      });
+      io.to(payload.code).emit("game:info", game);
+    }
+  });
+
+  socket.on("game:patch:status-action-doppelganger", async (payload) => {
+    await updateStatusActionDoppelganger(payload.code, payload.user, payload.role);
+    const game = await getGame(payload.code);
+    if (game) {
+      io.to(payload.code).emit("game:info", game);
     }
   });
 
@@ -163,9 +164,7 @@ io.on("connection", (socket) => {
     await updateStatusVoted(payload.code, payload.currentUser, payload.name);
     const game = await getGame(payload.code);
     if (game) {
-      io.to(payload.code).emit("game:info", {
-        game,
-      });
+      io.to(payload.code).emit("game:info", game);
     }
   });
 

@@ -3,6 +3,7 @@ import { Role } from "../lib/enums";
 import { User, Game, GameSetup } from "../lib/types";
 import {
   updateUserAction,
+  updateUserActionDoppelganger,
   updateUserRole,
   updateUserVoted,
 } from "./userController";
@@ -172,6 +173,27 @@ const updateStatusAction = async (code: string, player: User) => {
   }
 };
 
+const updateStatusActionDoppelganger = async (
+  code: string,
+  player: User,
+  role: Role
+) => {
+  const game = await getGame(code);
+  if (game) {
+    const userUpdate = updateUserActionDoppelganger(player, role);
+    const players = game.players.map((player) => {
+      if (player.name === userUpdate.name) {
+        return userUpdate;
+      }
+      return player;
+    });
+    const gameRef = doc(fs, "games", code);
+    await updateDoc(gameRef, {
+      players: players,
+    });
+  }
+};
+
 const updateStatusVoted = async (
   code: string,
   currentUser: User,
@@ -207,5 +229,6 @@ export {
   updateRoleGameWithPlayer,
   updateRoleGameWithCard,
   updateStatusAction,
+  updateStatusActionDoppelganger,
   updateStatusVoted,
 };
