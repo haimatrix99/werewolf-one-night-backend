@@ -29,7 +29,6 @@ import { postMessage } from "./controllers/messageController";
 import audio from "./routers/audio";
 
 const PORT = process.env.PORT || 5000;
-const REACT_ENDPOINT = process.env.REACT_ENDPOINT || "http://localhost:3000";
 
 const app = express();
 const server = http.createServer(app);
@@ -45,8 +44,8 @@ const io = new SocketIO(server, {
   path: "/api/socket/io",
   addTrailingSlash: false,
   cors: {
-    origin: REACT_ENDPOINT,
-    methods: ["GET", "POST"],
+    origin: "*",
+    methods: ["*"],
     credentials: true,
   },
 });
@@ -153,7 +152,11 @@ io.on("connection", (socket) => {
   });
 
   socket.on("game:patch:status-action-doppelganger", async (payload) => {
-    await updateStatusActionDoppelganger(payload.code, payload.user, payload.role);
+    await updateStatusActionDoppelganger(
+      payload.code,
+      payload.user,
+      payload.role
+    );
     const game = await getGame(payload.code);
     if (game) {
       io.to(payload.code).emit("game:info", game);
