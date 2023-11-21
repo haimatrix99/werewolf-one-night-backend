@@ -1,4 +1,4 @@
-import { addDoc, collection } from "firebase/firestore";
+import { addDoc, collection, serverTimestamp } from "firebase/firestore";
 import { fs } from "../db";
 
 const postMessage = async (code: string, name: string, message: string) => {
@@ -7,6 +7,7 @@ const postMessage = async (code: string, name: string, message: string) => {
       code: code,
       name: name,
       message: message,
+      timestamp: serverTimestamp(),
     });
   } catch (e) {
     console.error("Error adding document: ", e);

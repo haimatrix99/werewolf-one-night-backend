@@ -1,4 +1,11 @@
-import { deleteDoc, doc, getDoc, setDoc, updateDoc } from "firebase/firestore";
+import {
+  deleteDoc,
+  doc,
+  getDoc,
+  serverTimestamp,
+  setDoc,
+  updateDoc,
+} from "firebase/firestore";
 import { Role } from "../lib/enums";
 import { User, Game, GameSetup } from "../lib/types";
 import {
@@ -15,6 +22,7 @@ const addGameSetup = async (code: string) => {
     await setDoc(doc(fs, "game-setup", code), {
       numbers: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
       discussTime: "10",
+      timestamp: serverTimestamp(),
     });
   } catch (e) {
     console.error("Error adding document: ", e);
@@ -59,6 +67,7 @@ const addGame = async (
       threeRemainCard: threeRemainCard,
       discussTime: discussTime,
       isEnded: false,
+      timestamp: serverTimestamp(),
     });
   } catch (e) {
     console.error("Error adding document: ", e);

@@ -1,8 +1,10 @@
+import { FieldValue } from "firebase/firestore";
 import { Role } from "./enums";
 
 type GameSetup = {
   numbers: number[];
   discussTime: string;
+  timestamp: FieldValue;
 };
 
 type Game = {
@@ -10,6 +12,7 @@ type Game = {
   threeRemainCard: Role[];
   discussTime: string;
   isEnded: boolean;
+  timestamp: FieldValue;
 };
 
 type User = {
