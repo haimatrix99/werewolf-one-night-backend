@@ -68,7 +68,7 @@ const addGame = async (
 const getGame = async (code: string) => {
   const gameRef = doc(fs, "games", code);
   const game = await getDoc(gameRef);
-  return game.data() as Game;
+  if (game.data()) return game.data() as Game;
 };
 
 const removeGame = async (code: string) => {
