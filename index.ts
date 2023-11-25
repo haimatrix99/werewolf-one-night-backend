@@ -7,9 +7,12 @@ import http from "http";
 import cors from "cors";
 import {
   addUser,
+  getUser,
   getUserById,
+  getUserRef,
   getUsersInRoom,
   removeUserByName,
+  updateUserMaster,
 } from "./controllers/userController";
 
 import {
@@ -52,7 +55,7 @@ const io = new SocketIO(server, {
 
 io.on("connection", (socket) => {
   socket.on("room:create", async ({ name, code }) => {
-    await addGameSetup(code);
+    await addGameSetup(code, name);
     await addUser({ id: socket.id, name, code, master: true });
     socket.join(code);
     io.to(code).emit("room:users", {
@@ -108,6 +111,7 @@ io.on("connection", (socket) => {
     });
     addGame(
       payload.code,
+      payload.name,
       payload.players,
       payload.threeRemainCard,
       payload.discussTime
@@ -181,18 +185,33 @@ io.on("connection", (socket) => {
   });
 
   socket.on("room:leave", async (payload) => {
+    const user = await getUser(payload.code, payload.name);
     await removeUserByName(payload.code, payload.name);
     socket.leave(payload.code);
     io.to(payload.code).emit("room:message", {
       user: "",
       text: `${payload.name} left the chat`,
     });
+    if (user) {
+      const users = await getUsersInRoom(user.code);
+      if (user.master && users && users.length > 0) {
+        const nextUser = users[0];
+        const nextUserRef = await getUserRef(nextUser.code, nextUser.name);
+        if (nextUserRef) {
+          await updateUserMaster(nextUserRef);
+        }
+        io.to(user.code).emit("room:message", {
+          user: "",
+          text: `${nextUser.name} is the room master now`,
+        });
+      }
+    }
     io.to(payload.code).emit("room:users", {
       users: await getUsersInRoom(payload.code),
     });
   });
 
-  socket.on("disconnect", async (reason) => {
+  socket.on("disconnect", async () => {
     const user = await getUserById(socket.id);
     if (user) {
       socket.leave(user.code);
@@ -201,6 +220,18 @@ io.on("connection", (socket) => {
         user: "",
         text: `${user.name} left the chat`,
       });
+      const users = await getUsersInRoom(user.code);
+      if (user.master && users && users.length > 0) {
+        const nextUser = users[0];
+        const nextUserRef = await getUserRef(nextUser.code, nextUser.name);
+        if (nextUserRef) {
+          await updateUserMaster(nextUserRef);
+        }
+        io.to(user.code).emit("room:message", {
+          user: "",
+          text: `${nextUser.name} is the room master now`,
+        });
+      }
       io.to(user.code).emit("room:users", {
         users: await getUsersInRoom(user.code),
       });

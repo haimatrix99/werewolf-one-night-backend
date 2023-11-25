@@ -3,11 +3,14 @@ import { User } from "../lib/types";
 import { isGameExist } from "./gameController";
 import { fs } from "../db";
 import {
+  DocumentData,
+  DocumentReference,
   addDoc,
   collection,
   deleteDoc,
   getDocs,
   query,
+  updateDoc,
   where,
 } from "firebase/firestore";
 
@@ -66,6 +69,12 @@ const getUserRef = async (code: string, name: string) => {
   if (userRef) {
     return userRef[0];
   }
+};
+
+const updateUserMaster = async (userRef: DocumentReference<DocumentData, DocumentData>) => {
+  await updateDoc(userRef, {
+    master: true,
+  });
 };
 
 const getUser = async (code: string, name: string) => {
@@ -137,6 +146,7 @@ const updateUserVoted = (currentUser: User, name: string) => {
   return updateUser;
 };
 
+
 export {
   addUser,
   removeUserByName,
@@ -147,5 +157,6 @@ export {
   updateUserRole,
   updateUserAction,
   updateUserVoted,
+  updateUserMaster,
   updateUserActionDoppelganger,
 };

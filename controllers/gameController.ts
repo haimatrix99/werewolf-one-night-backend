@@ -16,12 +16,14 @@ import {
 } from "./userController";
 import { fs } from "../db";
 
-const addGameSetup = async (code: string) => {
+const addGameSetup = async (code: string, name: string) => {
   code = code.trim();
+  name = name.trim();
   try {
     await setDoc(doc(fs, "game-setup", code), {
       numbers: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
       discussTime: "10",
+      createdBy: name,
       timestamp: serverTimestamp(),
     });
   } catch (e) {
@@ -55,11 +57,13 @@ const isGameExist = async (code: string) => {
 
 const addGame = async (
   code: string,
+  name: string,
   players: User[],
   threeRemainCard: Role[],
   discussTime: string
 ) => {
   code = code.trim();
+  name = name.trim();
 
   try {
     await setDoc(doc(fs, "games", code), {
@@ -67,6 +71,7 @@ const addGame = async (
       threeRemainCard: threeRemainCard,
       discussTime: discussTime,
       isEnded: false,
+      startedBy: name,
       timestamp: serverTimestamp(),
     });
   } catch (e) {
