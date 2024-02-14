@@ -3,7 +3,7 @@ dotenv.config();
 
 import express from "express";
 import { Server as SocketIO } from "socket.io";
-import { cors } from 'cors';
+import cors from 'cors';
 import http from "http";
 import {
   addUser,
